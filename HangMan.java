@@ -115,7 +115,7 @@ public class HangMan {
         }
     }
 
-    private static void correctGuess(String word, String hiddenWord, String guess) {
+    public static void correctGuess(String word, String hiddenWord, String guess) {
         //only print message once even if the letter shows up multiple times
         if (hiddenWord.contains(guess)) {
             System.out.println("\nYou have already guessed that letter, try again!");
