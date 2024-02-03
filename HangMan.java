@@ -1,50 +1,141 @@
-/* Hangman
-In this assignment you will create a hangman game while also keeping track of the user’s high scores.  I will provide a text file full of roughly 120,000 words that you can randomly pick from, which contains the full contents of the Official Scrabble Player's Dictionary, Second Edition.  Your program will display the number of characters in the hidden word, and if the user has correctly guessed any letters, display that letter in the correct spot.  The user will have 7 guesses to figure out the word, which resets on each correctly solved word.  A correct guess does not reduce the number of guesses.  On the 7th wrong guess, the game ends, and the user is shown their score, and if they make the top 5 all-time high scores, they are asked to enter their name.  Then the high score list is displayed and the program is done.  You must also handle the input correctly, asking the user to re-enter any guesses that aren’t valid.
-
-Assume that the randomly chosen word was house.  If the user has made 3 guesses, L, B, S the output would look like this:
-Hidden Word: _ _ _ S _
-Incorrect Guesses: B, L
-Guesses Left: 5
-Score: 10
-Enter next guess: D
-Sorry, there were no D’s
-
-Hidden Word: _ _ _ S _
-Incorrect Guesses: B, D, L
-Guesses Left: 4
-Score: 10
-Enter next guess:
-
-The scoring works as follows:
-•	Each correct letter guess is worth 10 points
-•	Each correct word is worth 100 points + 30 points for each remaining guess left.
-
-*/
 
 import java.util.*;
 import java.io.*;
 
 public class HangMan {
-    /* TODO: Create a class called Highscore
-     * TODO: seperate the word into guessable spaces
-     * TODO: Create a class called Guesses
-     * TODO: Create a Score class
-     * */
     public static void main(String[] args) {
         System.out.println("Welcome to Hangman!\nHint... Try not to get hung up on the wrong guesses!");
         Scanner input = new Scanner(System.in);
-        readFile("TestList.txt");
-        String word = randomWord("TestList.txt");
-        System.out.println(word);
+        ArrayList<String> incorrectGuesses = new ArrayList<>();
+        int guessesLeft = 7;
+        int score = 0;
+        boolean play = true;
 
+        readFile("dictionary.txt");
+        String word = randomWord("dictionary.txt").toUpperCase();
 
+        while (play) {
+            StringBuilder hiddenWord = new StringBuilder();
+            hiddenWord.append("_ ".repeat(word.length()));
+
+            while (guessesLeft > 0 && hiddenWord.toString().contains("_")) {
+                System.out.println("\nHidden Word: " + hiddenWord);
+                System.out.println("Incorrect Guesses: " + incorrectGuesses.toString().replace("[", "")
+                        .replace("]", ""));
+                System.out.println("Guesses Left: " + guessesLeft);
+                System.out.println("Score: " + score);
+                System.out.print("Enter next guess: ");
+                String guess = input.next().toUpperCase();
+
+                try {
+                    if (guess.equals(" ") || guess.length() != 1 || !Character.isLetter(guess.charAt(0))) {
+                        System.out.println("\nInvalid input, enter a single letter");
+                        continue;
+                    } else if (hiddenWord.toString().contains(guess) || incorrectGuesses.toString().contains(guess)) {
+                        System.out.println("\nYou have already guessed that letter, try again!");
+                    } else if (word.contains(guess)) {
+                        correctGuess(word, hiddenWord.toString(), guess);
+                        score += 10;
+
+                    } else {
+                        // if the guess is incorrect
+                        incorrectGuesses.add(guess);
+                        System.out.println("\nSorry, there were no " + guess + "'s");
+                        guessesLeft--;
+                    }
+                } catch (Exception e) {
+                    System.out.println("Invalid input, try again");
+                    input.next();
+                }
+                for (int i = 0; i < word.length(); i++) {
+                    if (word.charAt(i) == guess.charAt(0)) {
+                        hiddenWord = new StringBuilder(hiddenWord.substring(0, i * 2) + guess + hiddenWord.substring(i * 2 + 1));
+                    }
+                }
+
+                if (!hiddenWord.toString().contains("_")) {
+                    System.out.println("Congratulations! You guessed the word correctly!");
+                    score += 100 + (30 * guessesLeft);
+                    System.out.println("You get 100 points plus " + (30 * guessesLeft) + " points for the remaining guess!");
+                    System.out.println("You had " + guessesLeft + " guesses left!");
+                    System.out.println("Your score is: " + score);
+                    System.out.print("Would you like to play again? (yes/no): ");
+                    String playAgain = input.next();
+                    while (!playAgain.equalsIgnoreCase("yes") && !playAgain.equalsIgnoreCase("no")) {
+                        System.out.println("Invalid input, please enter yes or no");
+                        playAgain = input.next();
+                    }
+                    if (playAgain.equalsIgnoreCase("no")) {
+//                        System.out.println("Thanks for playing!");
+                        break;
+                    } else if (playAgain.equalsIgnoreCase("yes")) {
+                        word = randomWord("dictionary.txt").toUpperCase();
+                        hiddenWord = new StringBuilder();
+                        hiddenWord.append("_ ".repeat(word.length()));
+                        incorrectGuesses.clear();
+                        guessesLeft = 7;
+                    } else {
+                        System.out.println("Invalid input, please enter yes or no");
+                        return;
+                    }
+                } else if (guessesLeft == 0) {
+                    System.out.println("\nYou ran out of guesses dummy!");
+                    System.out.println("The word was: " + word);
+                    System.out.print("Would you like to play again? (yes/no): ");
+                    String playAgain = input.next();
+                    if (playAgain.equalsIgnoreCase("no")) {
+                        System.out.println("\nThanks for playing!\nYou have yourself the most fabulous of days!");
+                        break;
+                    } else if (playAgain.equalsIgnoreCase("yes")) {
+                        word = randomWord("dictionary.txt").toUpperCase();
+                        hiddenWord = new StringBuilder();
+                        hiddenWord.append("_ ".repeat(word.length()));
+                        incorrectGuesses.clear();
+                        score = 0;
+                        guessesLeft = 7;
+                    } else {
+                        System.out.println("Invalid input, please enter yes or no");
+                    }
+                }
+            }
+
+            if (Highscore.isTop5(score, "Highscores.txt")) {
+                System.out.println("\nCongratulations! You have a top 5 score!");
+                System.out.print("Enter your name: ");
+                String name = input.next();
+                Highscore player = new Highscore(name, score);
+                player.WriteToFile("Highscores.txt");
+            } else {
+                System.out.println("You did not get a top 5 score");
+            }
+            System.out.println("Highscores");
+            System.out.println("-----------------");
+            displayFile("Highscores.txt");
+            play = false;
+        }
+    }
+
+    private static void correctGuess(String word, String hiddenWord, String guess) {
+        //only print message once even if the letter shows up multiple times
+        if (hiddenWord.contains(guess)) {
+            System.out.println("\nYou have already guessed that letter, try again!");
+        } else {
+            for (int i = 0; i < word.length(); i++) {
+                if (word.charAt(i) == guess.charAt(0)) {
+                    hiddenWord = hiddenWord.substring(0, i * 2) + guess + hiddenWord.substring(i * 2 + 1);
+
+                }
+            }
+            System.out.println("\nCorrect!");
+        }
     }
 
     public static void readFile(String filename) {
         try {
-            Scanner file = new Scanner(new File(filename));
-            while (file.hasNext()) {
-                String word = file.next();
+            File file = new File(filename);
+            Scanner fileReader = new Scanner(file);
+            while (fileReader.hasNext()) {
+                String word = fileReader.next();
 //                System.out.println(word);
             }
         } catch (FileNotFoundException e) {
@@ -55,18 +146,43 @@ public class HangMan {
     public static String randomWord(String filename) {
         try {
             Scanner file = new Scanner(new File(filename));
-            ArrayList<String> words = new ArrayList<String>();
+            ArrayList<String> words = new ArrayList<>();
             while (file.hasNext()) {
                 String word = file.next();
                 words.add(word);
             }
 
-            Random rand = new Random();
+//            Random rand = new Random();
             int index = (int) (Math.random() * words.size());
             return words.get(index);
         } catch (FileNotFoundException e) {
             System.out.println("File not found");
         }
         return "";
+    }
+
+    public static void displayFile(String filename) {
+        try {
+            File file = new File(filename);
+            Scanner fileReader = new Scanner(file);
+            ArrayList<Highscore> highscores = new ArrayList<>();
+            while (fileReader.hasNext()) {
+                String name = fileReader.next();
+                int score = fileReader.nextInt();
+                Highscore player = new Highscore(name, score);
+                highscores.add(player);
+                highscores.sort(Comparator.comparing(Highscore::getScore).reversed());
+            }
+            int count = 1;
+            for (int i = 0; i < 5; i++) {
+                if (i < highscores.size()) {
+                    //display in column format
+                    System.out.printf("%d. %-10s %d\n", count, highscores.get(i).getName(), highscores.get(i).getScore());
+                    count++;
+                }
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("File not found");
+        }
     }
 }
